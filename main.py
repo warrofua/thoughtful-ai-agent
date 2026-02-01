@@ -10,13 +10,59 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.prompt import Prompt
 from rich import box
-from rich.markdown import Markdown
-from rich.spinner import Spinner
 from rich.align import Align
-from rich.columns import Columns
 from rich.rule import Rule
+from rich.live import Live
+from rich.layout import Layout
+from rich.spinner import Spinner
 
 from agent import ThoughtfulAIAgent
+
+
+def typing_effect(console: Console, text: str, style: str = "", delay: float = 0.01):
+    """Display text with a typing animation effect."""
+    displayed = ""
+    for char in text:
+        displayed += char
+        console.print(f"\r{displayed}", style=style, end="")
+        time.sleep(delay)
+    console.print()  # New line at end
+
+
+def create_startup_animation(console: Console) -> None:
+    """Create a subtle startup animation sequence."""
+    # Clear screen for clean start
+    console.clear()
+    
+    # Animation 1: Brand logo fade-in with typing
+    logo_text = Text()
+    logo_text.append("╭─────────────────────────────╮\n", style="dim blue")
+    logo_text.append("│                             │\n", style="dim blue")
+    logo_text.append("│   💙  Thoughtful AI  💙    │\n", style="bold cyan")
+    logo_text.append("│                             │\n", style="dim blue")
+    logo_text.append("│   Customer Support Agent    │\n", style="dim")
+    logo_text.append("│                             │\n", style="dim blue")
+    logo_text.append("╰─────────────────────────────╯", style="dim blue")
+    
+    console.print(Align.center(logo_text))
+    console.print()
+    
+    # Animation 2: Loading bar with pulses
+    with console.status("[cyan]Initializing...[/cyan]", spinner="dots") as status:
+        time.sleep(0.8)
+    
+    # Animation 3: Connection sequence (quick, subtle)
+    steps = [
+        ("[dim]→ Loading configuration...[/dim]", 0.2),
+        ("[dim]→ Connecting to knowledge base...[/dim]", 0.3),
+        ("[dim]→ Initializing semantic search...[/dim]", 0.4),
+    ]
+    
+    for message, delay in steps:
+        console.print(Align.center(message))
+        time.sleep(delay)
+    
+    console.print()
 
 
 def create_welcome_panel() -> Panel:
@@ -95,7 +141,7 @@ def create_status_bar(agent) -> Text:
 
 
 def format_user_message(message: str) -> Panel:
-    """Format user message as a chat bubble."""
+    """Format user message as a chat bubble with slide-in effect."""
     return Panel(
         Text(message, style="white"),
         title="[bold green]You[/bold green]",
@@ -163,20 +209,30 @@ def format_agent_message(response: dict) -> Panel:
 
 
 def show_typing_indicator(console: Console):
-    """Show a brief typing indicator."""
-    with console.status("[bold cyan]🤔 Thinking...[/bold cyan]", spinner="dots"):
-        time.sleep(0.3)  # Brief pause for effect
+    """Show a brief typing indicator with animation."""
+    with console.status("[bold cyan]🤔 Thinking...[/bold cyan]", spinner="dots2"):
+        time.sleep(0.4)  # Brief pause for effect
+
+
+def show_exit_animation(console: Console):
+    """Show a subtle exit animation."""
+    console.print()
+    with console.status("[dim]Closing session...[/dim]", spinner="moon"):
+        time.sleep(0.5)
 
 
 def main():
     """Main entry point for the CLI."""
     console = Console()
     
+    # Show startup animation
+    create_startup_animation(console)
+    
     # Print welcome message
     console.print(create_welcome_panel())
     console.print()
     
-    # Initialize agent
+    # Initialize agent (with its own loading message)
     try:
         agent = ThoughtfulAIAgent()
     except Exception as e:
@@ -190,7 +246,7 @@ def main():
         sys.exit(1)
     
     # Show status bar
-    console.print(create_status_bar(agent))
+    console.print(Align.center(create_status_bar(agent)))
     console.print()
     
     # Conversation history for summary
@@ -212,6 +268,7 @@ def main():
                         console.print(f"[dim]• {item[:60]}...[/dim]")
                 
                 console.print()
+                show_exit_animation(console)
                 console.print(Panel(
                     "[italic]Thank you for using Thoughtful AI Support. Goodbye! 👋[/italic]",
                     border_style="dim"
@@ -249,6 +306,7 @@ def main():
             
         except KeyboardInterrupt:
             console.print("\n")
+            show_exit_animation(console)
             console.print(Panel(
                 "[italic]Interrupted. Goodbye! 👋[/italic]",
                 border_style="dim"
