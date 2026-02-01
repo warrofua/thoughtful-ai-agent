@@ -4,12 +4,17 @@ Uses Rich for beautiful terminal output.
 """
 
 import sys
+import time
 from rich.console import Console
 from rich.panel import Panel
-from rich.layout import Layout
 from rich.text import Text
 from rich.prompt import Prompt
 from rich import box
+from rich.markdown import Markdown
+from rich.spinner import Spinner
+from rich.align import Align
+from rich.columns import Columns
+from rich.rule import Rule
 
 from agent import ThoughtfulAIAgent
 
@@ -33,15 +38,60 @@ def create_welcome_panel() -> Panel:
     welcome_text.append(" to exit\n", style="dim")
     welcome_text.append("  • Type ", style="dim")
     welcome_text.append("/help", style="bold yellow")
-    welcome_text.append(" to see this message again", style="dim")
+    welcome_text.append(" to see this message again\n", style="dim")
+    welcome_text.append("  • Type ", style="dim")
+    welcome_text.append("/examples", style="bold magenta")
+    welcome_text.append(" to see example questions", style="dim")
     
     return Panel(
-        welcome_text,
+        Align.center(welcome_text),
         title="[bold blue]Thoughtful AI Agent[/bold blue]",
         border_style="blue",
         box=box.ROUNDED,
         padding=(1, 2)
     )
+
+
+def create_examples_panel() -> Panel:
+    """Create a panel showing example questions."""
+    examples = [
+        ("💙", "What does EVA do?", "cyan"),
+        ("💚", "What is CAM?", "green"),
+        ("💛", "How does PHIL work?", "yellow"),
+        ("🤍", "Tell me about Thoughtful AI", "white"),
+        ("💜", "What are the benefits?", "magenta"),
+        ("👋", "Hi", "bright_black"),
+        ("❓", "What can you do?", "bright_black"),
+    ]
+    
+    text = Text()
+    text.append("Try asking me:\n\n", style="bold")
+    
+    for emoji, question, color in examples:
+        text.append(f"{emoji} ", style=color)
+        text.append(f"{question}\n", style=color)
+    
+    return Panel(
+        text,
+        title="[bold magenta]Example Questions[/bold magenta]",
+        border_style="magenta",
+        box=box.ROUNDED,
+        padding=(1, 2)
+    )
+
+
+def create_status_bar(agent) -> Text:
+    """Create a status bar showing agent configuration."""
+    status = Text()
+    status.append("🟢 ", style="green")
+    status.append("Online", style="dim green")
+    
+    if agent.openai_enabled:
+        status.append("  •  ", style="dim")
+        status.append("🤖 ", style="magenta")
+        status.append("Enhanced", style="dim magenta")
+    
+    return status
 
 
 def format_user_message(message: str) -> Panel:
@@ -57,7 +107,10 @@ def format_user_message(message: str) -> Panel:
 
 def format_agent_message(response: dict) -> Panel:
     """Format agent response as a chat bubble with source indicator."""
-    content = Text(response["response"], style="white")
+    content_text = response["response"]
+    
+    # Use plain text with preserved newlines for reliable formatting
+    content = Text(content_text, style="white")
     
     # Add source indicator
     footer_text = Text()
@@ -67,7 +120,17 @@ def format_agent_message(response: dict) -> Panel:
         footer_text.append("✓ ", style="bold green")
         footer_text.append(f"Predefined answer", style="dim green")
         if response["confidence"]:
-            footer_text.append(f" (confidence: {response['confidence']:.2f})", style="dim")
+            # Color-code confidence
+            confidence = response["confidence"]
+            if confidence >= 0.9:
+                conf_style = "green"
+            elif confidence >= 0.7:
+                conf_style = "yellow"
+            else:
+                conf_style = "red"
+            footer_text.append(f" (confidence: ", style="dim")
+            footer_text.append(f"{confidence:.2f}", style=conf_style)
+            footer_text.append(")", style="dim")
     elif source == "llm":
         footer_text.append("🤖 ", style="bold magenta")
         footer_text.append("AI enhanced", style="dim magenta")
@@ -99,6 +162,12 @@ def format_agent_message(response: dict) -> Panel:
     )
 
 
+def show_typing_indicator(console: Console):
+    """Show a brief typing indicator."""
+    with console.status("[bold cyan]🤔 Thinking...[/bold cyan]", spinner="dots"):
+        time.sleep(0.3)  # Brief pause for effect
+
+
 def main():
     """Main entry point for the CLI."""
     console = Console()
@@ -110,10 +179,6 @@ def main():
     # Initialize agent
     try:
         agent = ThoughtfulAIAgent()
-        # Show OpenAI status (subtle indicator)
-        if agent.openai_enabled:
-            console.print("[dim italic]🤖 Enhanced responses enabled[/dim italic]")
-            console.print()
     except Exception as e:
         console.print(Panel(
             f"[bold red]Error initializing agent:[/bold red] {str(e)}\n"
@@ -124,7 +189,12 @@ def main():
         ))
         sys.exit(1)
     
+    # Show status bar
+    console.print(create_status_bar(agent))
     console.print()
+    
+    # Conversation history for summary
+    conversation_history = []
     
     # Main conversation loop
     while True:
@@ -134,6 +204,14 @@ def main():
             
             # Handle commands
             if user_input.lower() in ['/quit', '/exit', 'quit', 'exit']:
+                # Show conversation summary before exit
+                if conversation_history:
+                    console.print()
+                    console.print(Rule("[dim]Conversation Summary[/dim]", style="dim"))
+                    for item in conversation_history[-5:]:  # Last 5 exchanges
+                        console.print(f"[dim]• {item[:60]}...[/dim]")
+                
+                console.print()
                 console.print(Panel(
                     "[italic]Thank you for using Thoughtful AI Support. Goodbye! 👋[/italic]",
                     border_style="dim"
@@ -145,14 +223,27 @@ def main():
                 console.print()
                 continue
             
+            if user_input.lower() in ['/examples', '/example', 'examples']:
+                console.print(create_examples_panel())
+                console.print()
+                continue
+            
             if not user_input.strip():
                 continue
             
             # Display user message
             console.print(format_user_message(user_input))
             
+            # Show typing indicator
+            show_typing_indicator(console)
+            
             # Get and display agent response
             response = agent.respond(user_input)
+            
+            # Add to history
+            conversation_history.append(f"Q: {user_input}")
+            conversation_history.append(f"A: {response['response'][:50]}...")
+            
             console.print(format_agent_message(response))
             console.print()
             

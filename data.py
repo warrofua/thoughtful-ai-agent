@@ -114,12 +114,12 @@ GREETING_RESPONSES = [
 
 # Help/Capability responses - when user asks what the agent can do
 HELP_RESPONSES = [
-    "I can help you with questions about Thoughtful AI's healthcare automation agents! Specifically:\n\n• **EVA** - Eligibility Verification Agent\n• **CAM** - Claims Processing Agent\n• **PHIL** - Payment Posting Agent\n• General info about Thoughtful AI and our benefits\n\nWhat would you like to know about?",
-    "Here's what I can help you with:\n\n🤖 **Our Agents:**\n• EVA - Automates patient eligibility verification\n• CAM - Streamlines claims processing\n• PHIL - Automates payment posting\n\n📋 **Plus:** General questions about Thoughtful AI and how our solutions benefit healthcare organizations.\n\nWhat interests you?",
+    "I can help you with questions about Thoughtful AI's healthcare automation agents!\n\nI know about:\n• EVA - Eligibility Verification Agent\n• CAM - Claims Processing Agent\n• PHIL - Payment Posting Agent\n• General info about Thoughtful AI and our benefits\n\nWhat would you like to know about?",
+    "Here's what I can help you with:\n\nOur Agents:\n• EVA - Automates patient eligibility verification\n• CAM - Streamlines claims processing\n• PHIL - Automates payment posting\n\nPlus general questions about Thoughtful AI and how our solutions benefit healthcare organizations.\n\nWhat interests you?",
     "I'm your Thoughtful AI support specialist! I can answer questions about:\n\n• What each agent (EVA, CAM, PHIL) does\n• How our automation works\n• The benefits of using Thoughtful AI\n• General information about our company\n\nWhat would you like to explore?",
-    "Great question! I'm designed to help with:\n\n✓ Understanding EVA, CAM, and PHIL\n✓ Learning about Thoughtful AI's solutions\n✓ Discovering the benefits of healthcare automation\n✓ General support questions\n\nTry asking 'What is EVA?' or 'Tell me about CAM!'",
-    "I can assist you with information about our AI-powered healthcare agents:\n\n• **EVA** - Real-time eligibility verification\n• **CAM** - Accurate claims processing\n• **PHIL** - Fast payment reconciliation\n\nPlus general questions about our company and solutions. What can I tell you about?",
-    "Here's my expertise area:\n\n🏥 **Healthcare Automation Agents:**\n→ EVA (Eligibility Verification)\n→ CAM (Claims Processing)\n→ PHIL (Payment Posting)\n\n🎯 **Plus:** Benefits, company info, and how we help healthcare organizations.\n\nWhat would you like to dive into?",
+    "Great question! I'm designed to help with:\n\n• Understanding EVA, CAM, and PHIL\n• Learning about Thoughtful AI's solutions\n• Discovering the benefits of healthcare automation\n• General support questions\n\nTry asking 'What is EVA?' or 'Tell me about CAM!'",
+    "I can assist you with information about our AI-powered healthcare agents:\n\n• EVA - Real-time eligibility verification\n• CAM - Accurate claims processing\n• PHIL - Fast payment reconciliation\n\nPlus general questions about our company and solutions. What can I tell you about?",
+    "Here's my expertise area:\n\nHealthcare Automation Agents:\n• EVA (Eligibility Verification)\n• CAM (Claims Processing)\n• PHIL (Payment Posting)\n\nPlus benefits, company info, and how we help healthcare organizations.\n\nWhat would you like to dive into?",
 ]
 
 # Farewell/Goodbye responses - when user says bye, thanks, etc.
