@@ -2,11 +2,23 @@
 Core Agent logic for Thoughtful AI Customer Support.
 """
 
+import os
+import warnings
 import numpy as np
 from typing import Optional
 from sentence_transformers import SentenceTransformer
 
 from data import QUESTIONS, ANSWERS
+
+# Suppress transformers/sentence-transformers warnings and logging
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*unauthenticated requests.*")
+
+# Suppress transformers logging
+import logging
+logging.getLogger("transformers").setLevel(logging.ERROR)
+logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
 
 # Configuration
 SIMILARITY_THRESHOLD = 0.55  # Threshold for matching predefined answers (balanced for short queries)
@@ -29,18 +41,39 @@ class ThoughtfulAIAgent:
     """
     
     def __init__(self):
-        self.embedding_model = SentenceTransformer(DEFAULT_MODEL)
         self.predefined_embeddings = None
         self._fallback_index = 0
+        
+        # Load model with suppressed output
+        self.embedding_model = self._load_model_silently()
         
         # Pre-compute embeddings for predefined questions
         self._compute_embeddings()
     
+    def _load_model_silently(self):
+        """Load the sentence transformer model with suppressed output."""
+        import sys
+        from io import StringIO
+        
+        # Capture stdout/stderr during model loading
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+        
+        try:
+            model = SentenceTransformer(DEFAULT_MODEL)
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+        
+        return model
+    
     def _compute_embeddings(self):
         """Pre-compute embeddings for all predefined questions."""
         import sys
-        print("🔄 Loading embedding model...", file=sys.stderr)
-        self.predefined_embeddings = self.embedding_model.encode(QUESTIONS)
+        # Suppress stdout during model loading
+        self.predefined_embeddings = self.embedding_model.encode(QUESTIONS, show_progress_bar=False)
         print("✅ Agent ready!", file=sys.stderr)
     
     def _find_best_match(self, query: str) -> tuple[Optional[str], float]:
