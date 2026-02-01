@@ -66,9 +66,9 @@ def format_agent_message(response: dict) -> Panel:
         footer_text.append(f"Predefined answer", style="dim green")
         if response["confidence"]:
             footer_text.append(f" (confidence: {response['confidence']:.2f})", style="dim")
-    elif response["source"] == "llm":
-        footer_text.append("🤖 ", style="bold blue")
-        footer_text.append("AI generated", style="dim blue")
+    elif response["source"] == "generic":
+        footer_text.append("💬 ", style="bold blue")
+        footer_text.append("Generic response", style="dim blue")
     else:
         footer_text.append("⚠ ", style="bold yellow")
         footer_text.append("System message", style="dim yellow")
