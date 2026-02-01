@@ -68,6 +68,9 @@ def format_agent_message(response: dict) -> Panel:
         footer_text.append(f"Predefined answer", style="dim green")
         if response["confidence"]:
             footer_text.append(f" (confidence: {response['confidence']:.2f})", style="dim")
+    elif source == "llm":
+        footer_text.append("🤖 ", style="bold magenta")
+        footer_text.append("AI enhanced", style="dim magenta")
     elif source.startswith("generic-"):
         intent = source.replace("generic-", "")
         emoji_map = {
@@ -107,6 +110,10 @@ def main():
     # Initialize agent
     try:
         agent = ThoughtfulAIAgent()
+        # Show OpenAI status (subtle indicator)
+        if agent.openai_enabled:
+            console.print("[dim italic]🤖 Enhanced responses enabled[/dim italic]")
+            console.print()
     except Exception as e:
         console.print(Panel(
             f"[bold red]Error initializing agent:[/bold red] {str(e)}\n"

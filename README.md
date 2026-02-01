@@ -1,12 +1,14 @@
 # 🤖 Thoughtful AI Customer Support Agent
 
-A conversational AI Agent that answers questions about Thoughtful AI's healthcare automation agents using predefined responses, with generic fallback for unknown questions.
+A conversational AI Agent that answers questions about Thoughtful AI's healthcare automation agents using predefined responses, with intelligent generic fallback for unknown questions.
 
 ## Features
 
 - ✅ **Semantic Search**: Matches user queries to predefined Q&A using sentence embeddings
 - ✅ **Conversational CLI**: Beautiful terminal interface with Rich
-- ✅ **Generic Fallback**: Polite responses for questions outside the dataset
+- ✅ **Smart Intent Detection**: Recognizes greetings, help requests, thanks, farewells, etc.
+- ✅ **Variety of Responses**: 50+ generic responses across 7 intent categories
+- ✅ **Optional OpenAI**: Enable LLM fallback for even smarter responses (optional, no key needed)
 - ✅ **Smart Matching**: Handles typos, variations, and rephrased questions
 - ✅ **Error Handling**: Graceful handling of invalid inputs
 
@@ -27,7 +29,18 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Run the Agent
+### 3. (Optional) Enable OpenAI
+
+For even smarter fallback responses, add your OpenAI API key:
+
+```bash
+cp .env.example .env
+# Edit .env and add: OPENAI_API_KEY=your_key_here
+```
+
+Without an API key, the agent uses its built-in generic responses (works great!).
+
+### 4. Run the Agent
 
 ```bash
 python main.py
@@ -63,42 +76,77 @@ entry errors and reducing claim rejections.
 ✓ Predefined answer (confidence: 1.00)
 ```
 
-**Semantic Match:**
+**Greeting:**
 ```
-You: Tell me about CAM
+You: hi
 
-Thoughtful AI Agent: CAM streamlines the submission and management of claims, 
-improving accuracy, reducing manual intervention, and accelerating reimbursements.
+Thoughtful AI Agent: Hello! 👋 Welcome to Thoughtful AI Support. I'm here 
+to help you with questions about our healthcare automation agents like EVA, 
+CAM, and PHIL. What would you like to know?
 
-✓ Predefined answer (confidence: 0.82)
+👋 Greeting response
+```
+
+**Help Request:**
+```
+You: what can you do?
+
+Thoughtful AI Agent: I can help you with questions about Thoughtful AI's 
+healthcare automation agents! Specifically:
+
+• **EVA** - Eligibility Verification Agent
+• **CAM** - Claims Processing Agent  
+• **PHIL** - Payment Posting Agent
+
+What would you like to know about?
+
+❓ Help response
 ```
 
 **Generic Fallback:**
 ```
 You: What's the weather like?
 
-Thoughtful AI Agent: I'm not sure about that. I can help you with questions 
-about Thoughtful AI's agents like EVA, CAM, and PHIL. Is there something 
-specific about our healthcare automation agents I can help you with?
+Thoughtful AI Agent: I'm not sure about that. I specialize in Thoughtful AI's 
+healthcare automation agents like EVA, CAM, and PHIL. Is there something 
+about those I can help you with?
 
-💬 Generic response
+💬 Unknown response
 ```
 
 ## How It Works
 
-1. **Semantic Search**: User queries are embedded using `sentence-transformers` (all-MiniLM-L6-v2)
-2. **Similarity Matching**: Cosine similarity compares query against predefined questions
-3. **Threshold Check**: If similarity ≥ 0.55, return predefined answer
-4. **Generic Fallback**: Otherwise, return a helpful generic response
+1. **Intent Detection**: First, the agent checks if your input matches common intents (greeting, help, thanks, etc.)
+2. **Semantic Search**: If no intent match, your query is embedded using `sentence-transformers`
+3. **Similarity Matching**: Cosine similarity compares query against predefined questions
+4. **Threshold Check**: If similarity ≥ 0.55, return predefined answer
+5. **Generic Fallback**: Otherwise, return a context-appropriate generic response
+6. **Optional OpenAI**: If enabled, uses GPT for even smarter unknown question handling
+
+## Response Categories
+
+The agent has 50+ built-in responses across these categories:
+
+| Category | Responses | Triggers |
+|----------|-----------|----------|
+| **Predefined** | 5 topics | Direct questions about EVA, CAM, PHIL, etc. |
+| **Greeting** | 8 | hi, hello, hey, yo, howdy |
+| **Help** | 6 | help, what can you do, who are you |
+| **Farewell** | 8 | bye, goodbye, see you, cya |
+| **Gratitude** | 8 | thanks, thank you, appreciate |
+| **Acknowledgment** | 8 | ok, cool, great, nice, perfect |
+| **Confusion** | 6 | what, huh, don't understand |
+| **Unknown** | 10 | Anything outside scope |
 
 ## Project Structure
 
 ```
 thoughtful-ai-agent/
-├── agent.py          # Core agent logic with semantic search
-├── data.py           # Predefined Q&A dataset with variations
+├── agent.py          # Core agent logic with intent detection & semantic search
+├── data.py           # Predefined Q&A + generic response library
 ├── main.py           # Rich CLI interface
 ├── requirements.txt  # Dependencies
+├── .env.example      # Optional: OpenAI API key template
 └── README.md         # Documentation
 ```
 
@@ -120,6 +168,7 @@ Plus general questions about Thoughtful AI and its benefits.
 - **Rich** - Terminal UI
 - **sentence-transformers** - Semantic embeddings
 - **NumPy** - Vector operations
+- **OpenAI** *(optional)* - Smart LLM fallback
 
 ## Testing
 
@@ -135,9 +184,11 @@ tests = [
     'What does EVA do?',
     'What is CAM?',
     'How does PHIL work?',
-    'Tell me about Thoughtful AI',
-    'What are the benefits?',
-    'What is the weather?',  # Generic fallback
+    'hi',
+    'what can you do',
+    'thanks',
+    'bye',
+    'What is the weather?',
 ]
 
 for q in tests:

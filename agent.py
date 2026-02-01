@@ -3,6 +3,7 @@ Core Agent logic for Thoughtful AI Customer Support.
 """
 
 import os
+import sys
 import warnings
 import random
 import numpy as np
@@ -33,6 +34,15 @@ logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 SIMILARITY_THRESHOLD = 0.55  # Threshold for matching predefined answers (balanced for short queries)
 DEFAULT_MODEL = "all-MiniLM-L6-v2"  # Lightweight, fast embedding model
 
+# Optional OpenAI import - gracefully handles if not installed
+try:
+    from openai import OpenAI
+    from dotenv import load_dotenv
+    load_dotenv()
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+
 
 class ThoughtfulAIAgent:
     """
@@ -41,10 +51,14 @@ class ThoughtfulAIAgent:
     Uses semantic search to match user queries against predefined Q&A.
     Falls back to context-appropriate generic responses for questions 
     outside the predefined dataset.
+    
+    Optional: Set OPENAI_API_KEY in .env for enhanced LLM fallback.
     """
     
     def __init__(self):
         self.predefined_embeddings = None
+        self.openai_client = None
+        self.openai_enabled = False
         
         # Track which responses we've used (for variety)
         self._response_counters = {
@@ -62,13 +76,14 @@ class ThoughtfulAIAgent:
         
         # Pre-compute embeddings for predefined questions
         self._compute_embeddings()
+        
+        # Try to initialize OpenAI (optional, silent if fails)
+        self._init_openai_silently()
     
     def _load_model_silently(self):
         """Load the sentence transformer model with suppressed output."""
-        import sys
         from io import StringIO
         
-        # Capture stdout/stderr during model loading
         old_stdout = sys.stdout
         old_stderr = sys.stderr
         sys.stdout = StringIO()
@@ -84,10 +99,22 @@ class ThoughtfulAIAgent:
     
     def _compute_embeddings(self):
         """Pre-compute embeddings for all predefined questions."""
-        import sys
-        # Suppress stdout during model loading
         self.predefined_embeddings = self.embedding_model.encode(QUESTIONS, show_progress_bar=False)
         print("✅ Agent ready!", file=sys.stderr)
+    
+    def _init_openai_silently(self):
+        """Initialize OpenAI client silently if key is available."""
+        if not OPENAI_AVAILABLE:
+            return
+        
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key and api_key.strip() and api_key != "your_openai_api_key_here":
+            try:
+                self.openai_client = OpenAI(api_key=api_key)
+                self.openai_enabled = True
+            except Exception:
+                # Silently fail - we'll use generic responses
+                pass
     
     def _find_best_match(self, query: str) -> tuple[Optional[str], float]:
         """
@@ -98,7 +125,6 @@ class ThoughtfulAIAgent:
         """
         query_embedding = self.embedding_model.encode([query])
         
-        # Calculate cosine similarities
         similarities = np.dot(self.predefined_embeddings, query_embedding.T).flatten()
         
         best_idx = np.argmax(similarities)
@@ -114,7 +140,7 @@ class ThoughtfulAIAgent:
         
         Returns:
             Intent category: 'greeting', 'help', 'farewell', 'gratitude', 
-            'acknowledgment', or 'unknown'
+            'acknowledgment', 'confusion', or 'unknown'
         """
         query_lower = query.lower().strip()
         words = query_lower.split()
@@ -154,8 +180,10 @@ class ThoughtfulAIAgent:
             return "acknowledgment"
         
         # Priority 6: Confusion/unclear
-        confusion_words = ["what", "huh", "confused", "don't understand", "dont understand"]
-        if any(word in words_set for word in confusion_words[:2]) or "don't understand" in query_lower or "dont understand" in query_lower:
+        confusion_words = ["what", "huh", "confused"]
+        if any(word in words_set for word in confusion_words[:2]):
+            return "confusion"
+        if "don't understand" in query_lower or "dont understand" in query_lower:
             return "confusion"
         
         return "unknown"
@@ -186,6 +214,41 @@ class ThoughtfulAIAgent:
         
         return responses[index], source
     
+    def _get_openai_response(self, query: str) -> Optional[str]:
+        """
+        Get a response from OpenAI for unknown questions.
+        Returns None if OpenAI is not available or fails.
+        """
+        if not self.openai_enabled or not self.openai_client:
+            return None
+        
+        try:
+            system_prompt = (
+                "You are a helpful customer support agent for Thoughtful AI, a company that "
+                "provides AI-powered automation agents for healthcare. "
+                "Thoughtful AI offers agents like EVA (Eligibility Verification), "
+                "CAM (Claims Processing), and PHIL (Payment Posting). "
+                "The user asked something not directly in your training data. "
+                "Provide a helpful, friendly response. If you can relate their question "
+                "to healthcare automation, do so. Otherwise, gently guide them back to "
+                "topics about Thoughtful AI's agents. Keep it brief (2-3 sentences)."
+            )
+            
+            response = self.openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": query}
+                ],
+                temperature=0.7,
+                max_tokens=150
+            )
+            
+            return response.choices[0].message.content
+        except Exception:
+            # Fall back to generic responses on any error
+            return None
+    
     def respond(self, query: str) -> dict:
         """
         Generate a response to the user's query.
@@ -193,7 +256,7 @@ class ThoughtfulAIAgent:
         Returns:
             Dictionary containing:
                 - response: The answer text
-                - source: 'predefined' or 'generic-*'
+                - source: 'predefined', 'generic-*', or 'llm'
                 - confidence: Similarity score (for predefined) or None
         """
         query = query.strip()
@@ -215,8 +278,20 @@ class ThoughtfulAIAgent:
                 "confidence": score
             }
         
-        # No predefined match - detect intent and provide appropriate generic response
+        # No predefined match - detect intent
         intent = self._detect_intent(query)
+        
+        # For unknown intent, try OpenAI first if available
+        if intent == "unknown" and self.openai_enabled:
+            openai_response = self._get_openai_response(query)
+            if openai_response:
+                return {
+                    "response": openai_response,
+                    "source": "llm",
+                    "confidence": None
+                }
+        
+        # Use generic response (either as fallback or primary for non-unknown intents)
         response, source = self._get_generic_response(intent)
         
         return {
