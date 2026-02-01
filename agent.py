@@ -12,13 +12,16 @@ from data import QUESTIONS, ANSWERS
 
 # Suppress transformers/sentence-transformers warnings and logging
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", message=".*unauthenticated requests.*")
+warnings.filterwarnings("ignore", message=".*HF_TOKEN.*")
 
-# Suppress transformers logging
+# Suppress logging
 import logging
 logging.getLogger("transformers").setLevel(logging.ERROR)
 logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
+logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 
 # Configuration
 SIMILARITY_THRESHOLD = 0.55  # Threshold for matching predefined answers (balanced for short queries)
