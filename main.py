@@ -61,14 +61,27 @@ def format_agent_message(response: dict) -> Panel:
     
     # Add source indicator
     footer_text = Text()
-    if response["source"] == "predefined":
+    source = response["source"]
+    
+    if source == "predefined":
         footer_text.append("✓ ", style="bold green")
         footer_text.append(f"Predefined answer", style="dim green")
         if response["confidence"]:
             footer_text.append(f" (confidence: {response['confidence']:.2f})", style="dim")
-    elif response["source"] == "generic":
-        footer_text.append("💬 ", style="bold blue")
-        footer_text.append("Generic response", style="dim blue")
+    elif source.startswith("generic-"):
+        intent = source.replace("generic-", "")
+        emoji_map = {
+            "greeting": "👋",
+            "help": "❓",
+            "farewell": "👋",
+            "gratitude": "🙏",
+            "ack": "✓",
+            "confusion": "🤔",
+            "unknown": "💬",
+        }
+        emoji = emoji_map.get(intent, "💬")
+        footer_text.append(f"{emoji} ", style="bold blue")
+        footer_text.append(f"{intent.capitalize()} response", style="dim blue")
     else:
         footer_text.append("⚠ ", style="bold yellow")
         footer_text.append("System message", style="dim yellow")

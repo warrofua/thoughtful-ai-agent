@@ -4,11 +4,17 @@ Core Agent logic for Thoughtful AI Customer Support.
 
 import os
 import warnings
+import random
 import numpy as np
 from typing import Optional
 from sentence_transformers import SentenceTransformer
 
-from data import QUESTIONS, ANSWERS
+from data import (
+    QUESTIONS, ANSWERS,
+    GREETING_RESPONSES, HELP_RESPONSES, FAREWELL_RESPONSES,
+    GRATITUDE_RESPONSES, UNKNOWN_RESPONSES, ACKNOWLEDGMENT_RESPONSES,
+    CONFUSION_RESPONSES, INTENT_KEYWORDS
+)
 
 # Suppress transformers/sentence-transformers warnings and logging
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -27,25 +33,29 @@ logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 SIMILARITY_THRESHOLD = 0.55  # Threshold for matching predefined answers (balanced for short queries)
 DEFAULT_MODEL = "all-MiniLM-L6-v2"  # Lightweight, fast embedding model
 
-# Generic fallback responses for questions outside the dataset
-GENERIC_RESPONSES = [
-    "I'm not sure about that. I can help you with questions about Thoughtful AI's agents like EVA, CAM, and PHIL. Is there something specific about our healthcare automation agents I can help you with?",
-    "I don't have information on that topic. I'm specifically designed to answer questions about Thoughtful AI's agents (EVA, CAM, PHIL) and their benefits. How can I help you with those?",
-    "That's outside my area of expertise. I specialize in Thoughtful AI's healthcare automation agents. Would you like to know about EVA, CAM, or PHIL instead?",
-]
-
 
 class ThoughtfulAIAgent:
     """
     Customer Support Agent for Thoughtful AI.
     
     Uses semantic search to match user queries against predefined Q&A.
-    Falls back to generic responses for questions outside the predefined dataset.
+    Falls back to context-appropriate generic responses for questions 
+    outside the predefined dataset.
     """
     
     def __init__(self):
         self.predefined_embeddings = None
-        self._fallback_index = 0
+        
+        # Track which responses we've used (for variety)
+        self._response_counters = {
+            "greeting": 0,
+            "help": 0,
+            "farewell": 0,
+            "gratitude": 0,
+            "unknown": 0,
+            "acknowledgment": 0,
+            "confusion": 0,
+        }
         
         # Load model with suppressed output
         self.embedding_model = self._load_model_silently()
@@ -98,14 +108,83 @@ class ThoughtfulAIAgent:
             return QUESTIONS[best_idx], float(best_score)
         return None, float(best_score)
     
-    def _get_generic_response(self, query: str) -> str:
+    def _detect_intent(self, query: str) -> str:
         """
-        Get a generic fallback response for questions not in the predefined dataset.
-        Cycles through different responses for variety.
+        Detect the user's intent from their query.
+        
+        Returns:
+            Intent category: 'greeting', 'help', 'farewell', 'gratitude', 
+            'acknowledgment', or 'unknown'
         """
-        response = GENERIC_RESPONSES[self._fallback_index % len(GENERIC_RESPONSES)]
-        self._fallback_index += 1
-        return response
+        query_lower = query.lower().strip()
+        words = query_lower.split()
+        words_set = set(words)
+        
+        # Priority 1: Help/capabilities (check these first since they're more specific)
+        help_keywords = ["help", "what can you do", "what do you do", "capabilities", 
+                        "what are you", "who are you", "features", "functions", "assist"]
+        for keyword in help_keywords:
+            if keyword in query_lower:
+                return "help"
+        
+        # Priority 2: Check for exact word matches for greetings
+        greeting_words = ["hi", "hello", "hey", "greetings", "howdy", "hiya", "yo", "sup"]
+        if any(word in words_set for word in greeting_words):
+            return "greeting"
+        
+        # Check for time-based greetings
+        if any(word in query_lower for word in ["morning", "afternoon", "evening"]):
+            return "greeting"
+        
+        # Priority 3: Farewell
+        farewell_words = ["bye", "goodbye", "cya", "later"]
+        if any(word in words_set for word in farewell_words):
+            return "farewell"
+        if "see you" in query_lower or "exit" in words_set or "quit" in words_set:
+            return "farewell"
+        
+        # Priority 4: Gratitude
+        gratitude_words = ["thanks", "thank", "thx", "ty", "appreciate", "grateful", "cheers"]
+        if any(word in words_set for word in gratitude_words):
+            return "gratitude"
+        
+        # Priority 5: Acknowledgment
+        ack_words = ["ok", "okay", "cool", "great", "good", "nice", "perfect", "sure", "alright"]
+        if any(word in words_set for word in ack_words):
+            return "acknowledgment"
+        
+        # Priority 6: Confusion/unclear
+        confusion_words = ["what", "huh", "confused", "don't understand", "dont understand"]
+        if any(word in words_set for word in confusion_words[:2]) or "don't understand" in query_lower or "dont understand" in query_lower:
+            return "confusion"
+        
+        return "unknown"
+    
+    def _get_generic_response(self, intent: str) -> tuple[str, str]:
+        """
+        Get a context-appropriate generic response.
+        
+        Returns:
+            Tuple of (response_text, source_category)
+        """
+        response_map = {
+            "greeting": (GREETING_RESPONSES, "generic-greeting"),
+            "help": (HELP_RESPONSES, "generic-help"),
+            "farewell": (FAREWELL_RESPONSES, "generic-farewell"),
+            "gratitude": (GRATITUDE_RESPONSES, "generic-gratitude"),
+            "acknowledgment": (ACKNOWLEDGMENT_RESPONSES, "generic-ack"),
+            "confusion": (CONFUSION_RESPONSES, "generic-confusion"),
+            "unknown": (UNKNOWN_RESPONSES, "generic-unknown"),
+        }
+        
+        responses, source = response_map.get(intent, response_map["unknown"])
+        
+        # Cycle through responses for variety
+        counter_key = intent if intent in self._response_counters else "unknown"
+        index = self._response_counters[counter_key] % len(responses)
+        self._response_counters[counter_key] += 1
+        
+        return responses[index], source
     
     def respond(self, query: str) -> dict:
         """
@@ -114,7 +193,7 @@ class ThoughtfulAIAgent:
         Returns:
             Dictionary containing:
                 - response: The answer text
-                - source: 'predefined' or 'generic'
+                - source: 'predefined' or 'generic-*'
                 - confidence: Similarity score (for predefined) or None
         """
         query = query.strip()
@@ -136,9 +215,12 @@ class ThoughtfulAIAgent:
                 "confidence": score
             }
         
-        # Fall back to generic response
+        # No predefined match - detect intent and provide appropriate generic response
+        intent = self._detect_intent(query)
+        response, source = self._get_generic_response(intent)
+        
         return {
-            "response": self._get_generic_response(query),
-            "source": "generic",
+            "response": response,
+            "source": source,
             "confidence": None
         }
