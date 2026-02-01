@@ -1,6 +1,7 @@
 """
 Predefined Q&A dataset for Thoughtful AI Customer Support Agent.
 Includes variations to handle different phrasings of the same question.
+Also includes facet-based keywords for functional queries.
 """
 
 PREDEFINED_QA = [
@@ -15,6 +16,18 @@ PREDEFINED_QA = [
             "Explain EVA",
             "What is the eligibility verification agent?",
             "How does EVA work?",
+        ],
+        "facets": [  # Functional descriptions without naming the agent
+            "verify eligibility",
+            "check patient eligibility",
+            "eligibility verification",
+            "benefits verification",
+            "check insurance eligibility",
+            "verify benefits",
+            "eligibility checks",
+            "insurance verification",
+            "patient eligibility",
+            "real-time eligibility",
         ]
     },
     # CAM - Claims Processing Agent
@@ -28,6 +41,19 @@ PREDEFINED_QA = [
             "What is the claims processing agent?",
             "How does CAM work?",
             "What does CAM do?",
+        ],
+        "facets": [  # Functional descriptions without naming the agent
+            "process claims",
+            "claims submission",
+            "submit claims",
+            "manage claims",
+            "claims management",
+            "handle claims",
+            "claims accuracy",
+            "accelerate reimbursements",
+            "claims processing",
+            "claim rejections",
+            "denied claims",
         ]
     },
     # PHIL - Payment Posting Agent
@@ -41,6 +67,18 @@ PREDEFINED_QA = [
             "What is the payment posting agent?",
             "What does PHIL do?",
             "How does PHIL work?",
+        ],
+        "facets": [  # Functional descriptions without naming the agent
+            "post payments",
+            "payment posting",
+            "patient payments",
+            "payment reconciliation",
+            "reconcile payments",
+            "handle payments",
+            "payment processing",
+            "account reconciliation",
+            "payment accuracy",
+            "administrative burden",
         ]
     },
     # General - About Thoughtful AI Agents
@@ -56,6 +94,17 @@ PREDEFINED_QA = [
             "What services does Thoughtful AI provide?",
             "List your agents",
             "What AI agents are available?",
+        ],
+        "facets": [
+            "healthcare automation",
+            "ai agents",
+            "automation solutions",
+            "healthcare ai",
+            "streamline processes",
+            "reduce manual work",
+            "your solutions",
+            "your products",
+            "what do you offer",
         ]
     },
     # Benefits
@@ -70,6 +119,18 @@ PREDEFINED_QA = [
             "What value do your agents provide?",
             "Tell me about the benefits",
             "Why choose Thoughtful AI?",
+        ],
+        "facets": [
+            "reduce costs",
+            "save money",
+            "operational efficiency",
+            "reduce errors",
+            "administrative costs",
+            "improve accuracy",
+            "faster processing",
+            "save time",
+            "return on investment",
+            "roi",
         ]
     }
 ]
@@ -78,10 +139,14 @@ PREDEFINED_QA = [
 QUESTIONS = []
 ANSWER_MAP = {}  # Maps normalized question to answer
 
+# Build facet-to-answer mapping
+FACET_MAP = {}  # Maps facet keywords to answer
+
 for qa in PREDEFINED_QA:
     main_q = qa["question"]
     answer = qa["answer"]
     variations = qa.get("variations", [])
+    facets = qa.get("facets", [])
     
     # Add main question
     QUESTIONS.append(main_q)
@@ -91,6 +156,10 @@ for qa in PREDEFINED_QA:
     for var in variations:
         QUESTIONS.append(var)
         ANSWER_MAP[var] = answer
+    
+    # Add facets to facet map
+    for facet in facets:
+        FACET_MAP[facet.lower()] = answer
 
 # For backward compatibility
 ANSWERS = ANSWER_MAP
@@ -187,7 +256,8 @@ CONFUSION_RESPONSES = [
 INTENT_KEYWORDS = {
     "greeting": ["hi", "hello", "hey", "greetings", "howdy", "hiya", "yo", "sup", "morning", "afternoon", "evening"],
     "help": ["help", "what can you do", "what do you do", "capabilities", "what are you", "who are you", "features", "functions", "assist"],
-    "farewell": ["bye", "goodbye", "see you", "cya", "later", "exit", "quit", "stop", "end"],
+    "farewell": ["bye", "goodbye", "see you", "cya", "later", "exit", "quit"],
     "gratitude": ["thanks", "thank you", "thx", "ty", "appreciate", "grateful", "cheers"],
-    "acknowledgment": ["ok", "okay", "got it", "understood", "i see", "alright", "sure", "cool", "great", "good", "nice", "perfect"],
+    "acknowledgment": ["ok", "okay", "cool", "great", "good", "nice", "perfect", "sure", "alright"],
+    "confusion": ["what", "huh", "confused", "don't understand", "dont understand"],
 }

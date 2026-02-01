@@ -11,7 +11,7 @@ from typing import Optional
 from sentence_transformers import SentenceTransformer
 
 from data import (
-    QUESTIONS, ANSWERS,
+    QUESTIONS, ANSWERS, FACET_MAP,
     GREETING_RESPONSES, HELP_RESPONSES, FAREWELL_RESPONSES,
     GRATITUDE_RESPONSES, UNKNOWN_RESPONSES, ACKNOWLEDGMENT_RESPONSES,
     CONFUSION_RESPONSES, INTENT_KEYWORDS
@@ -133,6 +133,40 @@ class ThoughtfulAIAgent:
         if best_score >= SIMILARITY_THRESHOLD:
             return QUESTIONS[best_idx], float(best_score)
         return None, float(best_score)
+    
+    def _find_facet_match(self, query: str) -> Optional[str]:
+        """
+        Check if query matches any facet keywords (functional descriptions).
+        This catches queries like "how do you handle claims" → CAM
+        without the user needing to know the agent name.
+        
+        Returns:
+            The matching answer or None
+        """
+        query_lower = query.lower()
+        
+        # Check for exact facet matches first
+        for facet, answer in FACET_MAP.items():
+            if facet in query_lower:
+                return answer
+        
+        # Check for partial matches (word boundary)
+        query_words = set(query_lower.split())
+        
+        # Score each facet by word overlap
+        best_match = None
+        best_score = 0
+        
+        for facet, answer in FACET_MAP.items():
+            facet_words = set(facet.split())
+            overlap = len(query_words & facet_words)
+            
+            # Require at least 2 words to match for better precision
+            if overlap >= 2 and overlap > best_score:
+                best_score = overlap
+                best_match = answer
+        
+        return best_match
     
     def _detect_intent(self, query: str) -> str:
         """
@@ -268,7 +302,17 @@ class ThoughtfulAIAgent:
                 "confidence": None
             }
         
-        # Try to find a match in predefined Q&A
+        # Priority 1: Check for facet matches (functional descriptions)
+        # This catches "how do you handle claims" → CAM without agent name
+        facet_answer = self._find_facet_match(query)
+        if facet_answer:
+            return {
+                "response": facet_answer,
+                "source": "predefined",
+                "confidence": 0.85  # High confidence for facet matches
+            }
+        
+        # Priority 2: Semantic search on predefined questions
         matched_question, score = self._find_best_match(query)
         
         if matched_question:
