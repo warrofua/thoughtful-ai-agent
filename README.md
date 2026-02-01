@@ -184,11 +184,16 @@ for q in ['What is EVA?', 'hi', 'what can you do', 'thanks', 'bye']:
 
 ### Comprehensive Test Suite
 
-Run the full test suite (28 tests):
+Run the full test suite (34 tests total):
 
 ```bash
 source venv/bin/activate
+
+# Main test suite (28 tests)
 python test_agent.py
+
+# OpenAI integration tests (6 tests)
+python test_openai_integration.py
 ```
 
 Or with pytest (if installed):
@@ -196,21 +201,24 @@ Or with pytest (if installed):
 ```bash
 source venv/bin/activate
 pip install pytest
-pytest test_agent.py -v
+pytest test_agent.py test_openai_integration.py -v
 ```
 
 ### Test Coverage
 
-| Category | Tests |
-|----------|-------|
-| **Predefined Q&A** | Exact matches for EVA, CAM, PHIL, About, Benefits |
-| **Variations** | Semantic matching for different phrasings |
-| **Facet-based** | Functional queries without agent names |
-| **Intent Detection** | Greeting, help, farewell, gratitude, acknowledgment |
-| **Fallbacks** | Unknown queries, empty input, whitespace |
-| **Response Rotation** | Variety in generic responses |
-| **Edge Cases** | Case insensitivity, punctuation handling |
-| **Data Integrity** | Q&A structure, facet map, response lists |
+| Category | Tests | File |
+|----------|-------|------|
+| **Predefined Q&A** | Exact matches for EVA, CAM, PHIL, About, Benefits | `test_agent.py` |
+| **Variations** | Semantic matching for different phrasings | `test_agent.py` |
+| **Facet-based** | Functional queries without agent names | `test_agent.py` |
+| **Intent Detection** | Greeting, help, farewell, gratitude, acknowledgment | `test_agent.py` |
+| **Fallbacks** | Unknown queries, empty input, whitespace | `test_agent.py` |
+| **Response Rotation** | Variety in generic responses | `test_agent.py` |
+| **Edge Cases** | Case insensitivity, punctuation handling | `test_agent.py` |
+| **Data Integrity** | Q&A structure, facet map, response lists | `test_agent.py` |
+| **OpenAI Init** | API key validation, placeholder detection | `test_openai_integration.py` |
+| **OpenAI Responses** | Response generation, error handling | `test_openai_integration.py` |
+| **OpenAI Fallback** | Graceful degradation on API errors | `test_openai_integration.py` |
 
 ## 🏥 About Thoughtful AI
 
