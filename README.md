@@ -139,15 +139,36 @@ Without an API key, the agent works perfectly with built-in responses.
 
 ```
 thoughtful-ai-agent/
-├── agent.py          # Core logic with intent detection & search
+├── agent.py          # Core logic with detailed documentation
 ├── data.py           # Q&A dataset + 54 generic responses
 ├── main.py           # Rich CLI with animations
+├── test_agent.py     # Comprehensive test suite (28 tests)
 ├── requirements.txt  # Dependencies
 ├── .env.example      # Optional OpenAI config
 └── README.md         # This file
 ```
 
+## 📚 Code Documentation
+
+All modules include comprehensive documentation:
+
+- **Module docstrings** - Overview and usage examples
+- **Class docstrings** - Attributes and methods
+- **Method docstrings** - Args, Returns, Examples
+- **Inline comments** - Explanation of complex logic
+- **Type hints** - Function signatures with types
+
+### Key Design Decisions (Documented in Code)
+
+1. **Cascading Match Strategy** - Documented priority order in `respond()`
+2. **Facet Matching** - Explains functional keyword detection
+3. **Response Rotation** - Ensures variety in generic responses
+4. **Silent Failures** - OpenAI optional, no errors if unavailable
+5. **Confidence Color-Coding** - Visual feedback on match quality
+
 ## 🧪 Testing
+
+### Quick Test
 
 ```bash
 source venv/bin/activate
@@ -160,6 +181,36 @@ for q in ['What is EVA?', 'hi', 'what can you do', 'thanks', 'bye']:
     print(f'{r[\"source\"]}: {q}')
 "
 ```
+
+### Comprehensive Test Suite
+
+Run the full test suite (28 tests):
+
+```bash
+source venv/bin/activate
+python test_agent.py
+```
+
+Or with pytest (if installed):
+
+```bash
+source venv/bin/activate
+pip install pytest
+pytest test_agent.py -v
+```
+
+### Test Coverage
+
+| Category | Tests |
+|----------|-------|
+| **Predefined Q&A** | Exact matches for EVA, CAM, PHIL, About, Benefits |
+| **Variations** | Semantic matching for different phrasings |
+| **Facet-based** | Functional queries without agent names |
+| **Intent Detection** | Greeting, help, farewell, gratitude, acknowledgment |
+| **Fallbacks** | Unknown queries, empty input, whitespace |
+| **Response Rotation** | Variety in generic responses |
+| **Edge Cases** | Case insensitivity, punctuation handling |
+| **Data Integrity** | Q&A structure, facet map, response lists |
 
 ## 🏥 About Thoughtful AI
 
